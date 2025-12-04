@@ -1,0 +1,2086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACC Data Reconciliation Dashboard</title>
+    <style>
+        :root {
+            --background: hsl(210 20% 98%);
+            --foreground: hsl(215 25% 15%);
+            --card: hsl(0 0% 100%);
+            --card-foreground: hsl(215 25% 15%);
+            --primary: hsl(200 95% 45%);
+            --primary-foreground: hsl(0 0% 100%);
+            --secondary: hsl(185 80% 50%);
+            --secondary-foreground: hsl(0 0% 100%);
+            --muted: hsl(210 15% 94%);
+            --muted-foreground: hsl(215 15% 50%);
+            --accent: hsl(165 75% 55%);
+            --success: hsl(142 76% 36%);
+            --warning: hsl(38 92% 50%);
+            --destructive: hsl(0 72% 51%);
+            --info: hsl(200 95% 45%);
+            --border: hsl(214 20% 88%);
+            --radius: 0.75rem;
+            --shadow-sm: 0 2px 8px -2px hsl(215 25% 15% / 0.08);
+            --shadow-md: 0 4px 16px -4px hsl(215 25% 15% / 0.12);
+            --shadow-lg: 0 8px 24px -6px hsl(215 25% 15% / 0.15);
+            --sidebar-width: 260px;
+            --sidebar-collapsed: 0px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--foreground);
+            line-height: 1.5;
+        }
+
+        .app { display: flex; min-height: 100vh; }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--card);
+            border-right: 1px solid var(--border);
+            position: fixed;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed);
+            border-right: none;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 68px;
+        }
+
+        .logo-icon {
+            width: 44px; height: 44px; min-width: 44px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px -2px rgba(59, 130, 246, 0.4);
+        }
+
+        .logo-icon svg { width: 22px; height: 22px; color: white; }
+
+        .logo-text { white-space: nowrap; overflow: hidden; transition: opacity 0.2s; }
+        .logo-title { font-size: 15px; font-weight: 700; color: var(--foreground); }
+        .logo-subtitle { font-size: 11px; color: var(--muted-foreground); }
+
+        .sidebar.collapsed .logo-text,
+        .sidebar.collapsed .sidebar-header,
+        .sidebar.collapsed .sidebar-nav,
+        .sidebar.collapsed .sidebar-footer { display: none; }
+
+        .sidebar-toggle {
+            position: fixed;
+            left: calc(var(--sidebar-width) - 14px);
+            top: 24px;
+            width: 28px; height: 28px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            z-index: 101;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .sidebar-toggle:hover { background: var(--muted); }
+        .sidebar.collapsed ~ .sidebar-toggle { left: 12px; transform: rotate(180deg); }
+        .sidebar-toggle svg { width: 16px; height: 16px; color: var(--muted-foreground); }
+
+        .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+
+        .nav-section { margin-bottom: 20px; }
+        .nav-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted-foreground);
+            padding: 8px 12px 8px;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            color: var(--muted-foreground);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-bottom: 4px;
+        }
+
+        .nav-item:hover { background: var(--muted); color: var(--foreground); }
+        .nav-item.active { background: hsl(200 95% 45% / 0.1); color: var(--primary); }
+        .nav-item svg { width: 20px; height: 20px; min-width: 20px; }
+
+        .nav-badge {
+            margin-left: auto;
+            font-size: 11px;
+            background: var(--muted);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .nav-item.active .nav-badge { background: hsl(200 95% 45% / 0.2); color: var(--primary); }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--muted-foreground);
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar.collapsed ~ .main { margin-left: 0; }
+
+        .header {
+            background: hsl(0 0% 100% / 0.8);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 24px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .published-date {
+            font-size: 11px;
+            color: var(--muted-foreground);
+            margin-bottom: 12px;
+        }
+
+        .header-top { display: flex; align-items: center; justify-content: space-between; }
+
+        .header-left { display: flex; align-items: center; gap: 12px; }
+
+        .header-icon {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .header-icon.so { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .header-icon.po { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        .header-icon.oh { background: linear-gradient(135deg, #10b981, #059669); }
+        .header-icon.home { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .header-icon svg { width: 22px; height: 22px; color: white; }
+
+        .header-title { font-size: 20px; font-weight: 700; color: var(--foreground); }
+        .header-subtitle { font-size: 13px; color: var(--muted-foreground); }
+
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-nav a {
+            font-size: 13px;
+            color: var(--muted-foreground);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: color 0.15s;
+        }
+
+        .header-nav a:hover { color: var(--foreground); }
+        .header-nav svg { width: 16px; height: 16px; }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--muted-foreground);
+            margin-top: 8px;
+        }
+
+        .breadcrumb a { color: var(--primary); text-decoration: none; cursor: pointer; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        .breadcrumb svg { width: 14px; height: 14px; }
+
+        .content { padding: 24px; }
+
+        /* Stats Cards - Template Style */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-card-inner { display: flex; align-items: flex-start; gap: 16px; }
+
+        .stat-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .stat-icon.primary { background: hsl(200 95% 45% / 0.1); color: var(--primary); }
+        .stat-icon.info { background: hsl(200 95% 45% / 0.1); color: var(--info); }
+        .stat-icon.success { background: hsl(142 76% 36% / 0.1); color: var(--success); }
+        .stat-icon.warning { background: hsl(38 92% 50% / 0.1); color: var(--warning); }
+        .stat-icon svg { width: 20px; height: 20px; }
+
+        .stat-content { flex: 1; min-width: 0; }
+        .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted-foreground); font-weight: 500; }
+        .stat-value { font-size: 24px; font-weight: 700; color: var(--foreground); margin-top: 4px; }
+        .stat-sub { font-size: 12px; color: var(--muted-foreground); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Section */
+        .section { margin-bottom: 24px; }
+        .section-title { font-size: 17px; font-weight: 600; color: var(--foreground); margin-bottom: 16px; }
+
+        /* OpCo Cards - Template Style */
+        .opco-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+
+        .opco-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow-md);
+            transition: box-shadow 0.2s;
+        }
+
+        .opco-card:hover { box-shadow: var(--shadow-lg); }
+
+        .opco-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .opco-name { font-size: 17px; font-weight: 600; color: var(--foreground); }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+
+        .status-badge.excellent { background: hsl(200 95% 45%); color: white; }
+        .status-badge.good { background: hsl(185 80% 50%); color: white; }
+        .status-badge.warning { background: hsl(38 92% 50%); color: white; }
+        .status-badge.review { background: hsl(0 72% 51%); color: white; }
+
+        .opco-metrics { margin-bottom: 16px; }
+
+        .metric-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .metric-label { font-size: 13px; color: var(--muted-foreground); }
+
+        .metric-value { font-size: 14px; font-weight: 600; color: var(--foreground); display: flex; align-items: center; gap: 6px; }
+        .metric-value svg { width: 16px; height: 16px; }
+        .metric-value.success, .metric-value.success svg { color: var(--success); }
+        .metric-value.warning, .metric-value.warning svg { color: var(--warning); }
+        .metric-value.danger, .metric-value.danger svg { color: var(--destructive); }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--muted);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-fill.success { background: var(--success); }
+        .progress-fill.warning { background: var(--warning); }
+        .progress-fill.danger { background: var(--destructive); }
+
+        .opco-footer {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .opco-stat { text-align: center; }
+        .opco-stat-label { font-size: 11px; color: var(--muted-foreground); }
+        .opco-stat-value { font-size: 13px; font-weight: 600; color: var(--foreground); }
+
+        /* Chart Section - Template Style */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .chart-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .chart-title { font-size: 17px; font-weight: 600; color: var(--foreground); margin-bottom: 16px; }
+
+        /* SVG Bar Chart */
+        .bar-chart-container { position: relative; }
+
+        .bar-chart-svg { width: 100%; height: 280px; }
+
+        .chart-legend {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted-foreground); }
+        .legend-dot { width: 14px; height: 14px; border-radius: 3px; }
+        .legend-dot.headers { background: var(--primary); }
+        .legend-dot.lines { background: var(--secondary); }
+
+        /* Table - Template Style */
+        .table-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .table-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table-title { font-size: 17px; font-weight: 600; color: var(--foreground); }
+
+        .table-wrapper { overflow-x: auto; }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        th {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--muted-foreground);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: hsl(210 15% 97%);
+            border-bottom: 1px solid var(--border);
+        }
+
+        th.right { text-align: right; }
+        th.center { text-align: center; }
+
+        td {
+            padding: 16px;
+            font-size: 13px;
+            color: var(--foreground);
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: hsl(210 15% 98%); }
+
+        .cell-name { font-weight: 600; }
+        .cell-right { text-align: right; font-variant-numeric: tabular-nums; }
+        .cell-center { text-align: center; }
+
+        .pct { font-weight: 600; }
+        .pct.high { color: var(--success); }
+        .pct.med { color: var(--warning); }
+        .pct.low { color: var(--destructive); }
+        .pct.muted { color: var(--muted-foreground); font-weight: normal; }
+
+        .status-cell { display: flex; justify-content: center; }
+        .status-cell svg { width: 18px; height: 18px; }
+        .status-cell.success svg { color: var(--success); }
+        .status-cell.warning svg { color: var(--warning); }
+        .status-cell.danger svg { color: var(--destructive); }
+
+        .totals-row td {
+            background: hsl(210 15% 96%) !important;
+            font-weight: 600;
+            border-top: 2px solid var(--border);
+        }
+
+        .text-primary { color: var(--primary); font-weight: 600; }
+
+        /* Page visibility */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* Module cards for home */
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .module-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .module-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+
+        .module-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+
+        .module-icon {
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .module-icon.so { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .module-icon.po { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        .module-icon.oh { background: linear-gradient(135deg, #10b981, #059669); }
+        .module-icon svg { width: 24px; height: 24px; color: white; }
+
+        .module-title { font-size: 18px; font-weight: 600; color: var(--foreground); margin-bottom: 8px; }
+        .module-desc { font-size: 13px; color: var(--muted-foreground); line-height: 1.5; margin-bottom: 20px; }
+
+        .module-metrics { border-top: 1px solid var(--border); padding-top: 16px; }
+
+        .module-metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+
+        .module-metric-label { font-size: 13px; color: var(--muted-foreground); }
+        .module-metric-value { font-size: 13px; font-weight: 600; color: var(--foreground); }
+
+        /* Responsive */
+        @media (max-width: 1400px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .chart-grid { grid-template-columns: 1fr; }
+            .modules-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .sidebar-toggle { display: none; }
+            .main { margin-left: 0 !important; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .modules-grid { grid-template-columns: 1fr; }
+            .header-nav { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                        <path d="M3 5V19A9 3 0 0 0 21 19V5"></path>
+                        <path d="M3 12A9 3 0 0 0 21 12"></path>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <div class="logo-title">Air Control Concepts</div>
+                    <div class="logo-subtitle">Data Reconciliation</div>
+                </div>
+            </div>
+
+            <div class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-label">Overview</div>
+                    <div class="nav-item active" data-page="home" onclick="showPage('home')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
+                            <path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        </svg>
+                        <span>Dashboard</span>
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Modules</div>
+                    <div class="nav-item" data-page="so" onclick="showPage('so')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+                            <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+                            <path d="m9 15 2 2 4-4"></path>
+                        </svg>
+                        <span>Sales Order</span>
+                        <span class="nav-badge">6</span>
+                    </div>
+                    <div class="nav-item" data-page="po" onclick="showPage('po')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="8" cy="21" r="1"></circle>
+                            <circle cx="19" cy="21" r="1"></circle>
+                            <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path>
+                        </svg>
+                        <span>Purchase Order</span>
+                        <span class="nav-badge">4</span>
+                    </div>
+                    <div class="nav-item" data-page="oh" onclick="showPage('oh')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m7.5 4.27 9 5.15"></path>
+                            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path>
+                            <path d="m3.3 7 8.7 5 8.7-5"></path>
+                            <path d="M12 22V12"></path>
+                        </svg>
+                        <span>On-Hand Inventory</span>
+                        <span class="nav-badge">5</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                ACC • UAT Environment<br>
+                Last Updated: Dec 04, 2025
+            </div>
+        </nav>
+
+        <!-- Sidebar Toggle -->
+        <button class="sidebar-toggle" onclick="toggleSidebar()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </button>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- HOME PAGE -->
+            <div id="page-home" class="page active">
+                <div class="header">
+                    <div class="published-date">Published: December 04, 2025</div>
+                    <div class="header-top">
+                        <div class="header-left">
+                            <div class="header-icon home">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                                    <path d="M3 5V19A9 3 0 0 0 21 19V5"></path>
+                                    <path d="M3 12A9 3 0 0 0 21 12"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 class="header-title">Reconciliation Dashboard</h1>
+                                <p class="header-subtitle">Air Control Concepts UAT Environment</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-card-inner">
+                                <div class="stat-icon primary">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                                        <path d="M3 5V19A9 3 0 0 0 21 19V5"></path>
+                                        <path d="M3 12A9 3 0 0 0 21 12"></path>
+                                    </svg>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Total Source Records</div>
+                                    <div class="stat-value">36,482</div>
+                                    <div class="stat-sub">Across all modules</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-inner">
+                                <div class="stat-icon info">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+                                        <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+                                        <path d="m9 15 2 2 4-4"></path>
+                                    </svg>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Valid Records</div>
+                                    <div class="stat-value">14,219</div>
+                                    <div class="stat-sub">38.98% of source</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-inner">
+                                <div class="stat-icon success">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                                        <polyline points="16 7 22 7 22 13"></polyline>
+                                    </svg>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Successfully Loaded</div>
+                                    <div class="stat-value">14,011</div>
+                                    <div class="stat-sub" style="color: var(--success);">98.54% load rate</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-inner">
+                                <div class="stat-icon warning">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" x2="12" y1="8" y2="12"></line>
+                                        <line x1="12" x2="12.01" y1="16" y2="16"></line>
+                                    </svg>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Active OpCos</div>
+                                    <div class="stat-value">7</div>
+                                    <div class="stat-sub">All reporting</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-title">Reconciliation Modules</h2>
+                        <div class="modules-grid">
+                            <div class="module-card" onclick="showPage('so')">
+                                <div class="module-header">
+                                    <div class="module-icon so">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+                                            <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+                                            <path d="m9 15 2 2 4-4"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="status-badge excellent">Excellent</span>
+                                </div>
+                                <h3 class="module-title">Sales Order</h3>
+                                <p class="module-desc">Header and line-level reconciliation for sales order data migration across operating companies.</p>
+                                <div class="module-metrics">
+                                    <div class="module-metric">
+                                        <span class="module-metric-label">Operating Companies</span>
+                                        <span class="module-metric-value">6</span>
+                                    </div>
+                                    <div class="module-metric">
+                                        <span class="module-metric-label">Total Records</span>
+                                        <span class="module-metric-value">23,933</span>
+                                    </div>
+                                    <div class="module-metric">
+                                        <span class="module-metric-label">Load Rate</span>
+                                        <span class="module-metric-value" style="color: var(--success);">98.89%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="module-card" onclick="showPage('po')">
+                                <div class="module-header">
+                                    <div class="module-icon po">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="8" cy="21" r="1"></circle>
+                                            <circle cx="19" cy="21" r="1"></circle>
+                                            <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="status-badge good">Good</span>
+                                </div>
+                                <h3 class="module-title">Purchase Order</h3>
+                                <p class="module-desc">Procurement data reconciliation with header and line validation tracking.</p>
+                                <div class="module-metrics">
+                                    <div class="module-metric">
+                                        <span class="module-metric-label">Operating Companies</span>
+                                        <span class="module-metric-value">4</span>
+                                    </div>
+                                    <div class="module-metric">
+                                        <span class="module-metric-label">Total Records</span>
+                                        <span class="module-metric-value">3,137</span>
+                                    </div>
+                                    <div class="module-metric">
+                                        <span class="module-metric-label">Load Rate</span>
+                                        <span class="module-metric-value" style="color: var(--secondary);">92.88%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="module-card" onclick="showPage('oh')">
+                                <div class="module-header">
+                                    <div class="module-icon oh">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="m7.5 4.27 9 5.15"></path>
+                                            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path>
+                                            <path d="m3.3 7 8.7 5 8.7-5"></path>
+                                            <path d="M12 22V12"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="status-badge excellent">Excellent</span>
+                                </div>
+                                <h3 class="module-title">On-Hand Inventory</h3>
+                                <p class="module-desc">Warehouse inventory records reconciliation across all locations.</p>
+                                <div class="module-metrics">
+                                    <div class="module-metric">
+                                        <span class="module-metric-label">Operating Companies</span>
+                                        <span class="module-metric-value">5</span>
+                                    </div>
+                                    <div class="module-metric">
+                                        <span class="module-metric-label">Total Records</span>
+                                        <span class="module-metric-value">9,412</span>
+                                    </div>
+                                    <div class="module-metric">
+                                        <span class="module-metric-label">Load Rate</span>
+                                        <span class="module-metric-value" style="color: var(--success);">99.74%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SALES ORDER PAGE -->
+            <div id="page-so" class="page">
+                <div class="header">
+                    <div class="published-date">Published: December 04, 2025</div>
+                    <div class="header-top">
+                        <div class="header-left">
+                            <div class="header-icon so">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                                    <path d="M3 5V19A9 3 0 0 0 21 19V5"></path>
+                                    <path d="M3 12A9 3 0 0 0 21 12"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 class="header-title">AIR Sales Order Conversion</h1>
+                                <p class="header-subtitle">OpCo Comparison Analytics</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="breadcrumb">
+                        <a onclick="showPage('home')">Dashboard</a>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                        <span>Sales Order</span>
+                    </div>
+                </div>
+                <div class="content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-card-inner">
+                                <div class="stat-icon primary">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5V19A9 3 0 0 0 21 19V5"></path><path d="M3 12A9 3 0 0 0 21 12"></path></svg>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Total Source Records</div>
+                                    <div class="stat-value">23,933</div>
+                                    <div class="stat-sub">3,923 Headers • 20,010 Lines</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-inner">
+                                <div class="stat-icon info">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Valid Records</div>
+                                    <div class="stat-value">7,552</div>
+                                    <div class="stat-sub">1,677 Headers • 5,875 Lines</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-inner">
+                                <div class="stat-icon success">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Successfully Loaded</div>
+                                    <div class="stat-value">6,272</div>
+                                    <div class="stat-sub">1,581 Headers • 4,691 Lines</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-inner">
+                                <div class="stat-icon warning">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>
+                                </div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Overall Load Rate</div>
+                                    <div class="stat-value">83.1%</div>
+                                    <div class="stat-sub">Headers 94.3% • Lines 79.8%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-title">OpCo Load Performance</h2>
+                        <div class="opco-grid">
+                            <!-- ATS -->
+                            <div class="opco-card">
+                                <div class="opco-header">
+                                    <h3 class="opco-name">ATS</h3>
+                                    <span class="status-badge good">Good</span>
+                                </div>
+                                <div class="opco-metrics">
+                                    <div class="metric-row">
+                                        <span class="metric-label">Headers (Valid)</span>
+                                        <span class="metric-value warning">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+                                            78.72%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill warning" style="width: 78.72%"></div></div>
+                                    <div class="metric-row">
+                                        <span class="metric-label">Lines (Valid)</span>
+                                        <span class="metric-value warning">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+                                            73.97%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill warning" style="width: 73.97%"></div></div>
+                                </div>
+                                <div class="opco-footer">
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Loaded / Valid</div>
+                                        <div class="opco-stat-value">37 / 47</div>
+                                    </div>
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Exclusion Rate</div>
+                                        <div class="opco-stat-value">88.9%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- EP -->
+                            <div class="opco-card">
+                                <div class="opco-header">
+                                    <h3 class="opco-name">EP</h3>
+                                    <span class="status-badge review">Needs Review</span>
+                                </div>
+                                <div class="opco-metrics">
+                                    <div class="metric-row">
+                                        <span class="metric-label">Headers (Valid)</span>
+                                        <span class="metric-value danger">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>
+                                            62.86%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill danger" style="width: 62.86%"></div></div>
+                                    <div class="metric-row">
+                                        <span class="metric-label">Lines (Valid)</span>
+                                        <span class="metric-value danger">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>
+                                            45.62%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill danger" style="width: 45.62%"></div></div>
+                                </div>
+                                <div class="opco-footer">
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Loaded / Valid</div>
+                                        <div class="opco-stat-value">22 / 35</div>
+                                    </div>
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Exclusion Rate</div>
+                                        <div class="opco-stat-value">64.7%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Etairos -->
+                            <div class="opco-card">
+                                <div class="opco-header">
+                                    <h3 class="opco-name">Etairos</h3>
+                                    <span class="status-badge excellent">Excellent</span>
+                                </div>
+                                <div class="opco-metrics">
+                                    <div class="metric-row">
+                                        <span class="metric-label">Headers (Valid)</span>
+                                        <span class="metric-value success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                                            100%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill success" style="width: 100%"></div></div>
+                                    <div class="metric-row">
+                                        <span class="metric-label">Lines (Valid)</span>
+                                        <span class="metric-value success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                                            100%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill success" style="width: 100%"></div></div>
+                                </div>
+                                <div class="opco-footer">
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Loaded / Valid</div>
+                                        <div class="opco-stat-value">151 / 151</div>
+                                    </div>
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Exclusion Rate</div>
+                                        <div class="opco-stat-value">46.3%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- EBS -->
+                            <div class="opco-card">
+                                <div class="opco-header">
+                                    <h3 class="opco-name">EBS</h3>
+                                    <span class="status-badge good">Good</span>
+                                </div>
+                                <div class="opco-metrics">
+                                    <div class="metric-row">
+                                        <span class="metric-label">Headers (Valid)</span>
+                                        <span class="metric-value warning">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+                                            93.41%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill warning" style="width: 93.41%"></div></div>
+                                    <div class="metric-row">
+                                        <span class="metric-label">Lines (Valid)</span>
+                                        <span class="metric-value warning">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+                                            75.65%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill warning" style="width: 75.65%"></div></div>
+                                </div>
+                                <div class="opco-footer">
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Loaded / Valid</div>
+                                        <div class="opco-stat-value">1,007 / 1,078</div>
+                                    </div>
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Exclusion Rate</div>
+                                        <div class="opco-stat-value">53.2%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Dorse Std -->
+                            <div class="opco-card">
+                                <div class="opco-header">
+                                    <h3 class="opco-name">Dorse Std</h3>
+                                    <span class="status-badge excellent">Excellent</span>
+                                </div>
+                                <div class="opco-metrics">
+                                    <div class="metric-row">
+                                        <span class="metric-label">Headers (Valid)</span>
+                                        <span class="metric-value success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                                            99.63%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill success" style="width: 99.63%"></div></div>
+                                    <div class="metric-row">
+                                        <span class="metric-label">Lines (Valid)</span>
+                                        <span class="metric-value success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                                            100%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill success" style="width: 100%"></div></div>
+                                </div>
+                                <div class="opco-footer">
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Loaded / Valid</div>
+                                        <div class="opco-stat-value">267 / 268</div>
+                                    </div>
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Exclusion Rate</div>
+                                        <div class="opco-stat-value">29.5%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Dorse DS -->
+                            <div class="opco-card">
+                                <div class="opco-header">
+                                    <h3 class="opco-name">Dorse DS</h3>
+                                    <span class="status-badge excellent">Excellent</span>
+                                </div>
+                                <div class="opco-metrics">
+                                    <div class="metric-row">
+                                        <span class="metric-label">Headers (Valid)</span>
+                                        <span class="metric-value success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                                            98.98%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill success" style="width: 98.98%"></div></div>
+                                    <div class="metric-row">
+                                        <span class="metric-label">Lines (Valid)</span>
+                                        <span class="metric-value success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                                            99.45%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill success" style="width: 99.45%"></div></div>
+                                </div>
+                                <div class="opco-footer">
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Loaded / Valid</div>
+                                        <div class="opco-stat-value">97 / 98</div>
+                                    </div>
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Exclusion Rate</div>
+                                        <div class="opco-stat-value">72.3%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chart-grid">
+                        <div class="chart-card">
+                            <h3 class="chart-title">Load Success Rate (Against Valid Records)</h3>
+                            <div class="bar-chart-container">
+                                <svg class="bar-chart-svg" viewBox="0 0 600 280">
+                                    <!-- Grid lines -->
+                                    <g stroke="hsl(214 20% 88%)" stroke-dasharray="3 3">
+                                        <line x1="60" y1="40" x2="580" y2="40"/>
+                                        <line x1="60" y1="90" x2="580" y2="90"/>
+                                        <line x1="60" y1="140" x2="580" y2="140"/>
+                                        <line x1="60" y1="190" x2="580" y2="190"/>
+                                        <line x1="60" y1="240" x2="580" y2="240"/>
+                                    </g>
+                                    <!-- Y axis labels -->
+                                    <g fill="hsl(215 15% 50%)" font-size="11">
+                                        <text x="50" y="44" text-anchor="end">100</text>
+                                        <text x="50" y="94" text-anchor="end">75</text>
+                                        <text x="50" y="144" text-anchor="end">50</text>
+                                        <text x="50" y="194" text-anchor="end">25</text>
+                                        <text x="50" y="244" text-anchor="end">0</text>
+                                    </g>
+                                    <!-- 95% target line -->
+                                    <line x1="60" y1="50" x2="580" y2="50" stroke="hsl(142 76% 36%)" stroke-dasharray="5 5"/>
+                                    <text x="320" y="45" fill="hsl(142 76% 36%)" font-size="11" text-anchor="middle">95% Target</text>
+                                    <!-- Bars -->
+                                    <!-- ATS -->
+                                    <rect x="80" y="82" width="24" height="158" fill="hsl(200 95% 45%)" rx="3"/>
+                                    <rect x="108" y="92" width="24" height="148" fill="hsl(185 80% 50%)" rx="3"/>
+                                    <!-- EP -->
+                                    <rect x="160" y="114" width="24" height="126" fill="hsl(200 95% 45%)" rx="3"/>
+                                    <rect x="188" y="149" width="24" height="91" fill="hsl(185 80% 50%)" rx="3"/>
+                                    <!-- Etairos -->
+                                    <rect x="240" y="40" width="24" height="200" fill="hsl(200 95% 45%)" rx="3"/>
+                                    <rect x="268" y="40" width="24" height="200" fill="hsl(185 80% 50%)" rx="3"/>
+                                    <!-- EBS -->
+                                    <rect x="320" y="53" width="24" height="187" fill="hsl(200 95% 45%)" rx="3"/>
+                                    <rect x="348" y="89" width="24" height="151" fill="hsl(185 80% 50%)" rx="3"/>
+                                    <!-- Dorse Std -->
+                                    <rect x="400" y="41" width="24" height="199" fill="hsl(200 95% 45%)" rx="3"/>
+                                    <rect x="428" y="40" width="24" height="200" fill="hsl(185 80% 50%)" rx="3"/>
+                                    <!-- Dorse DS -->
+                                    <rect x="480" y="42" width="24" height="198" fill="hsl(200 95% 45%)" rx="3"/>
+                                    <rect x="508" y="41" width="24" height="199" fill="hsl(185 80% 50%)" rx="3"/>
+                                    <!-- X axis labels -->
+                                    <g fill="hsl(215 15% 50%)" font-size="11" text-anchor="middle">
+                                        <text x="110" y="260">ATS</text>
+                                        <text x="190" y="260">EP</text>
+                                        <text x="270" y="260">Etairos</text>
+                                        <text x="350" y="260">EBS</text>
+                                        <text x="430" y="260">Dorse Std</text>
+                                        <text x="510" y="260">Dorse DS</text>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div class="chart-legend">
+                                <div class="legend-item"><div class="legend-dot headers"></div>Headers %</div>
+                                <div class="legend-item"><div class="legend-dot lines"></div>Lines %</div>
+                            </div>
+                        </div>
+
+                        <div class="table-card" style="margin-bottom: 0;">
+                            <div class="table-header">
+                                <h3 class="table-title">OpCo Comparison - Key Metrics</h3>
+                            </div>
+                            <div class="table-wrapper">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 120px;">OpCo</th>
+                                            <th class="right">Total Hdrs</th>
+                                            <th class="right">Valid Hdrs</th>
+                                            <th class="right">Loaded</th>
+                                            <th class="right">Load %</th>
+                                            <th class="right">Exclusion %</th>
+                                            <th class="center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="cell-name">ATS</td>
+                                            <td class="cell-right">424</td>
+                                            <td class="cell-right">47</td>
+                                            <td class="cell-right">37</td>
+                                            <td class="cell-right pct med">78.72%</td>
+                                            <td class="cell-right pct muted">88.9%</td>
+                                            <td class="cell-center"><div class="status-cell warning"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></div></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="cell-name">EP</td>
+                                            <td class="cell-right">99</td>
+                                            <td class="cell-right">35</td>
+                                            <td class="cell-right">22</td>
+                                            <td class="cell-right pct low">62.86%</td>
+                                            <td class="cell-right pct muted">64.7%</td>
+                                            <td class="cell-center"><div class="status-cell danger"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg></div></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="cell-name">Etairos</td>
+                                            <td class="cell-right">231</td>
+                                            <td class="cell-right">151</td>
+                                            <td class="cell-right">151</td>
+                                            <td class="cell-right pct high">100%</td>
+                                            <td class="cell-right pct muted">46.3%</td>
+                                            <td class="cell-center"><div class="status-cell success"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg></div></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="cell-name">EBS</td>
+                                            <td class="cell-right">2,305</td>
+                                            <td class="cell-right">1,078</td>
+                                            <td class="cell-right">1,007</td>
+                                            <td class="cell-right pct med">93.41%</td>
+                                            <td class="cell-right pct muted">53.2%</td>
+                                            <td class="cell-center"><div class="status-cell warning"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></div></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="cell-name">Dorse Std</td>
+                                            <td class="cell-right">380</td>
+                                            <td class="cell-right">268</td>
+                                            <td class="cell-right">267</td>
+                                            <td class="cell-right pct high">99.63%</td>
+                                            <td class="cell-right pct muted">29.5%</td>
+                                            <td class="cell-center"><div class="status-cell success"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg></div></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="cell-name">Dorse DS</td>
+                                            <td class="cell-right">484</td>
+                                            <td class="cell-right">98</td>
+                                            <td class="cell-right">97</td>
+                                            <td class="cell-right pct high">98.98%</td>
+                                            <td class="cell-right pct muted">72.3%</td>
+                                            <td class="cell-center"><div class="status-cell success"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg></div></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-card">
+                        <div class="table-header">
+                            <h3 class="table-title">Detailed Breakdown - Headers & Lines</h3>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width: 100px;">OpCo</th>
+                                        <th class="center" colspan="3">Headers</th>
+                                        <th class="center" colspan="3">Lines</th>
+                                    </tr>
+                                    <tr>
+                                        <th></th>
+                                        <th class="right">Total</th>
+                                        <th class="right">Valid</th>
+                                        <th class="right">Loaded</th>
+                                        <th class="right">Total</th>
+                                        <th class="right">Valid</th>
+                                        <th class="right">Loaded</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="cell-name">ATS</td>
+                                        <td class="cell-right">424</td>
+                                        <td class="cell-right">47</td>
+                                        <td class="cell-right text-primary">37</td>
+                                        <td class="cell-right">6,289</td>
+                                        <td class="cell-right">73</td>
+                                        <td class="cell-right text-primary">54</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="cell-name">EP</td>
+                                        <td class="cell-right">99</td>
+                                        <td class="cell-right">35</td>
+                                        <td class="cell-right text-primary">22</td>
+                                        <td class="cell-right">583</td>
+                                        <td class="cell-right">274</td>
+                                        <td class="cell-right text-primary">125</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="cell-name">Etairos</td>
+                                        <td class="cell-right">231</td>
+                                        <td class="cell-right">151</td>
+                                        <td class="cell-right text-primary">151</td>
+                                        <td class="cell-right">608</td>
+                                        <td class="cell-right">359</td>
+                                        <td class="cell-right text-primary">359</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="cell-name">EBS</td>
+                                        <td class="cell-right">2,305</td>
+                                        <td class="cell-right">1,078</td>
+                                        <td class="cell-right text-primary">1,007</td>
+                                        <td class="cell-right">10,423</td>
+                                        <td class="cell-right">4,168</td>
+                                        <td class="cell-right text-primary">3,153</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="cell-name">Dorse Std</td>
+                                        <td class="cell-right">380</td>
+                                        <td class="cell-right">268</td>
+                                        <td class="cell-right text-primary">267</td>
+                                        <td class="cell-right">1,212</td>
+                                        <td class="cell-right">819</td>
+                                        <td class="cell-right text-primary">819</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="cell-name">Dorse DS</td>
+                                        <td class="cell-right">484</td>
+                                        <td class="cell-right">98</td>
+                                        <td class="cell-right text-primary">97</td>
+                                        <td class="cell-right">895</td>
+                                        <td class="cell-right">182</td>
+                                        <td class="cell-right text-primary">181</td>
+                                    </tr>
+                                    <tr class="totals-row">
+                                        <td>TOTAL</td>
+                                        <td class="cell-right">3,923</td>
+                                        <td class="cell-right">1,677</td>
+                                        <td class="cell-right text-primary">1,581</td>
+                                        <td class="cell-right">20,010</td>
+                                        <td class="cell-right">5,875</td>
+                                        <td class="cell-right text-primary">4,691</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PURCHASE ORDER PAGE -->
+            <div id="page-po" class="page">
+                <div class="header">
+                    <div class="published-date">Published: December 04, 2025</div>
+                    <div class="header-top">
+                        <div class="header-left">
+                            <div class="header-icon po">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>
+                            </div>
+                            <div>
+                                <h1 class="header-title">AIR Purchase Order Conversion</h1>
+                                <p class="header-subtitle">OpCo Comparison Analytics</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="breadcrumb">
+                        <a onclick="showPage('home')">Dashboard</a>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                        <span>Purchase Order</span>
+                    </div>
+                </div>
+                <div class="content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-card-inner">
+                                <div class="stat-icon primary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5V19A9 3 0 0 0 21 19V5"></path><path d="M3 12A9 3 0 0 0 21 12"></path></svg></div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Total Source Records</div>
+                                    <div class="stat-value">3,137</div>
+                                    <div class="stat-sub">645 Headers • 2,492 Lines</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-inner">
+                                <div class="stat-icon info"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg></div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Valid Records</div>
+                                    <div class="stat-value">632</div>
+                                    <div class="stat-sub">178 Headers • 454 Lines</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-inner">
+                                <div class="stat-icon success"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg></div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Successfully Loaded</div>
+                                    <div class="stat-value">587</div>
+                                    <div class="stat-sub">162 Headers • 425 Lines</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-inner">
+                                <div class="stat-icon warning"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg></div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Overall Load Rate</div>
+                                    <div class="stat-value">92.88%</div>
+                                    <div class="stat-sub">Headers 91.01% • Lines 93.61%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-title">OpCo Load Performance</h2>
+                        <div class="opco-grid">
+                            <!-- ATS -->
+                            <div class="opco-card">
+                                <div class="opco-header">
+                                    <h3 class="opco-name">ATS</h3>
+                                    <span class="status-badge good">Good</span>
+                                </div>
+                                <div class="opco-metrics">
+                                    <div class="metric-row">
+                                        <span class="metric-label">Headers (Valid)</span>
+                                        <span class="metric-value warning">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+                                            80.95%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill warning" style="width: 80.95%"></div></div>
+                                    <div class="metric-row">
+                                        <span class="metric-label">Lines (Valid)</span>
+                                        <span class="metric-value success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                                            93.94%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill success" style="width: 93.94%"></div></div>
+                                </div>
+                                <div class="opco-footer">
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Loaded / Valid</div>
+                                        <div class="opco-stat-value">110 / 120</div>
+                                    </div>
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Exclusion Rate</div>
+                                        <div class="opco-stat-value">95.9%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- C&J -->
+                            <div class="opco-card">
+                                <div class="opco-header">
+                                    <h3 class="opco-name">C&J</h3>
+                                    <span class="status-badge excellent">Excellent</span>
+                                </div>
+                                <div class="opco-metrics">
+                                    <div class="metric-row">
+                                        <span class="metric-label">Headers (Valid)</span>
+                                        <span class="metric-value success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                                            100%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill success" style="width: 100%"></div></div>
+                                    <div class="metric-row">
+                                        <span class="metric-label">Lines (Valid)</span>
+                                        <span class="metric-value success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                                            100%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill success" style="width: 100%"></div></div>
+                                </div>
+                                <div class="opco-footer">
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Loaded / Valid</div>
+                                        <div class="opco-stat-value">281 / 281</div>
+                                    </div>
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Exclusion Rate</div>
+                                        <div class="opco-stat-value">15.9%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Dorse -->
+                            <div class="opco-card">
+                                <div class="opco-header">
+                                    <h3 class="opco-name">Dorse</h3>
+                                    <span class="status-badge warning">Warning</span>
+                                </div>
+                                <div class="opco-metrics">
+                                    <div class="metric-row">
+                                        <span class="metric-label">Headers (Valid)</span>
+                                        <span class="metric-value warning">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+                                            81.82%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill warning" style="width: 81.82%"></div></div>
+                                    <div class="metric-row">
+                                        <span class="metric-label">Lines (Valid)</span>
+                                        <span class="metric-value warning">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+                                            79.23%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill warning" style="width: 79.23%"></div></div>
+                                </div>
+                                <div class="opco-footer">
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Loaded / Valid</div>
+                                        <div class="opco-stat-value">130 / 163</div>
+                                    </div>
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Exclusion Rate</div>
+                                        <div class="opco-stat-value">61.2%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Etairos -->
+                            <div class="opco-card">
+                                <div class="opco-header">
+                                    <h3 class="opco-name">Etairos</h3>
+                                    <span class="status-badge excellent">Excellent</span>
+                                </div>
+                                <div class="opco-metrics">
+                                    <div class="metric-row">
+                                        <span class="metric-label">Headers (Valid)</span>
+                                        <span class="metric-value success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                                            95.83%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill success" style="width: 95.83%"></div></div>
+                                    <div class="metric-row">
+                                        <span class="metric-label">Lines (Valid)</span>
+                                        <span class="metric-value success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                                            97.73%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill success" style="width: 97.73%"></div></div>
+                                </div>
+                                <div class="opco-footer">
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Loaded / Valid</div>
+                                        <div class="opco-stat-value">66 / 68</div>
+                                    </div>
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Exclusion Rate</div>
+                                        <div class="opco-stat-value">83.5%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chart-grid">
+                        <div class="chart-card">
+                            <h3 class="chart-title">Load Success Rate (Against Valid Records)</h3>
+                            <div class="bar-chart-container">
+                                <svg class="bar-chart-svg" viewBox="0 0 500 280">
+                                    <!-- Grid lines -->
+                                    <g stroke="hsl(214 20% 88%)" stroke-dasharray="3 3">
+                                        <line x1="60" y1="40" x2="480" y2="40"/>
+                                        <line x1="60" y1="90" x2="480" y2="90"/>
+                                        <line x1="60" y1="140" x2="480" y2="140"/>
+                                        <line x1="60" y1="190" x2="480" y2="190"/>
+                                        <line x1="60" y1="240" x2="480" y2="240"/>
+                                    </g>
+                                    <!-- Y axis labels -->
+                                    <g fill="hsl(215 15% 50%)" font-size="11">
+                                        <text x="50" y="44" text-anchor="end">100</text>
+                                        <text x="50" y="94" text-anchor="end">75</text>
+                                        <text x="50" y="144" text-anchor="end">50</text>
+                                        <text x="50" y="194" text-anchor="end">25</text>
+                                        <text x="50" y="244" text-anchor="end">0</text>
+                                    </g>
+                                    <!-- 95% target line -->
+                                    <line x1="60" y1="50" x2="480" y2="50" stroke="hsl(142 76% 36%)" stroke-dasharray="5 5"/>
+                                    <text x="270" y="45" fill="hsl(142 76% 36%)" font-size="11" text-anchor="middle">95% Target</text>
+                                    <!-- Bars -->
+                                    <!-- ATS -->
+                                    <rect x="90" y="78" width="28" height="162" fill="hsl(200 95% 45%)" rx="3"/>
+                                    <rect x="122" y="52" width="28" height="188" fill="hsl(185 80% 50%)" rx="3"/>
+                                    <!-- C&J -->
+                                    <rect x="180" y="40" width="28" height="200" fill="hsl(200 95% 45%)" rx="3"/>
+                                    <rect x="212" y="40" width="28" height="200" fill="hsl(185 80% 50%)" rx="3"/>
+                                    <!-- Dorse -->
+                                    <rect x="270" y="76" width="28" height="164" fill="hsl(200 95% 45%)" rx="3"/>
+                                    <rect x="302" y="82" width="28" height="158" fill="hsl(185 80% 50%)" rx="3"/>
+                                    <!-- Etairos -->
+                                    <rect x="360" y="48" width="28" height="192" fill="hsl(200 95% 45%)" rx="3"/>
+                                    <rect x="392" y="44" width="28" height="196" fill="hsl(185 80% 50%)" rx="3"/>
+                                    <!-- X axis labels -->
+                                    <g fill="hsl(215 15% 50%)" font-size="11" text-anchor="middle">
+                                        <text x="120" y="260">ATS</text>
+                                        <text x="210" y="260">C&J</text>
+                                        <text x="300" y="260">Dorse</text>
+                                        <text x="390" y="260">Etairos</text>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div class="chart-legend">
+                                <div class="legend-item"><div class="legend-dot headers"></div>Headers %</div>
+                                <div class="legend-item"><div class="legend-dot lines"></div>Lines %</div>
+                            </div>
+                        </div>
+
+                        <div class="table-card" style="margin-bottom: 0;">
+                            <div class="table-header">
+                                <h3 class="table-title">OpCo Comparison - Key Metrics</h3>
+                            </div>
+                            <div class="table-wrapper">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 120px;">OpCo</th>
+                                            <th class="right">Total Hdrs</th>
+                                            <th class="right">Valid Hdrs</th>
+                                            <th class="right">Loaded</th>
+                                            <th class="right">Load %</th>
+                                            <th class="right">Exclusion %</th>
+                                            <th class="center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="cell-name">ATS</td>
+                                            <td class="cell-right">525</td>
+                                            <td class="cell-right">21</td>
+                                            <td class="cell-right">17</td>
+                                            <td class="cell-right pct med">80.95%</td>
+                                            <td class="cell-right pct muted">96.0%</td>
+                                            <td class="cell-center"><div class="status-cell warning"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></div></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="cell-name">C&J</td>
+                                            <td class="cell-right">52</td>
+                                            <td class="cell-right">52</td>
+                                            <td class="cell-right">52</td>
+                                            <td class="cell-right pct high">100%</td>
+                                            <td class="cell-right pct muted">0%</td>
+                                            <td class="cell-center"><div class="status-cell success"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg></div></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="cell-name">Dorse</td>
+                                            <td class="cell-right">92</td>
+                                            <td class="cell-right">77</td>
+                                            <td class="cell-right">63</td>
+                                            <td class="cell-right pct med">81.82%</td>
+                                            <td class="cell-right pct muted">16.3%</td>
+                                            <td class="cell-center"><div class="status-cell warning"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></div></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="cell-name">Etairos</td>
+                                            <td class="cell-right">68</td>
+                                            <td class="cell-right">28</td>
+                                            <td class="cell-right">30</td>
+                                            <td class="cell-right pct high">95.83%</td>
+                                            <td class="cell-right pct muted">58.8%</td>
+                                            <td class="cell-center"><div class="status-cell success"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg></div></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-card">
+                        <div class="table-header">
+                            <h3 class="table-title">Detailed Breakdown - Headers & Lines</h3>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width: 100px;">OpCo</th>
+                                        <th class="center" colspan="3">Headers</th>
+                                        <th class="center" colspan="3">Lines</th>
+                                    </tr>
+                                    <tr>
+                                        <th></th>
+                                        <th class="right">Total</th>
+                                        <th class="right">Valid</th>
+                                        <th class="right">Loaded</th>
+                                        <th class="right">Total</th>
+                                        <th class="right">Valid</th>
+                                        <th class="right">Loaded</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="cell-name">ATS</td>
+                                        <td class="cell-right">525</td>
+                                        <td class="cell-right">21</td>
+                                        <td class="cell-right text-primary">17</td>
+                                        <td class="cell-right">2,401</td>
+                                        <td class="cell-right">99</td>
+                                        <td class="cell-right text-primary">93</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="cell-name">C&J</td>
+                                        <td class="cell-right">52</td>
+                                        <td class="cell-right">52</td>
+                                        <td class="cell-right text-primary">52</td>
+                                        <td class="cell-right">282</td>
+                                        <td class="cell-right">229</td>
+                                        <td class="cell-right text-primary">229</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="cell-name">Dorse</td>
+                                        <td class="cell-right">92</td>
+                                        <td class="cell-right">77</td>
+                                        <td class="cell-right text-primary">63</td>
+                                        <td class="cell-right">328</td>
+                                        <td class="cell-right">86</td>
+                                        <td class="cell-right text-primary">67</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="cell-name">Etairos</td>
+                                        <td class="cell-right">68</td>
+                                        <td class="cell-right">28</td>
+                                        <td class="cell-right text-primary">30</td>
+                                        <td class="cell-right">344</td>
+                                        <td class="cell-right">40</td>
+                                        <td class="cell-right text-primary">36</td>
+                                    </tr>
+                                    <tr class="totals-row">
+                                        <td>TOTAL</td>
+                                        <td class="cell-right">645</td>
+                                        <td class="cell-right">178</td>
+                                        <td class="cell-right text-primary">162</td>
+                                        <td class="cell-right">2,492</td>
+                                        <td class="cell-right">454</td>
+                                        <td class="cell-right text-primary">425</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ON-HAND INVENTORY PAGE -->
+            <div id="page-oh" class="page">
+                <div class="header">
+                    <div class="published-date">Published: December 04, 2025</div>
+                    <div class="header-top">
+                        <div class="header-left">
+                            <div class="header-icon oh">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"></path><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg>
+                            </div>
+                            <div>
+                                <h1 class="header-title">AIR On-Hand Inventory Conversion</h1>
+                                <p class="header-subtitle">OpCo Comparison Analytics</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="breadcrumb">
+                        <a onclick="showPage('home')">Dashboard</a>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                        <span>On-Hand Inventory</span>
+                    </div>
+                </div>
+                <div class="content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-card-inner">
+                                <div class="stat-icon primary"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5V19A9 3 0 0 0 21 19V5"></path><path d="M3 12A9 3 0 0 0 21 12"></path></svg></div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Total Source Records</div>
+                                    <div class="stat-value">9,412</div>
+                                    <div class="stat-sub">From 5 OpCos</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-inner">
+                                <div class="stat-icon info"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg></div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Valid Records</div>
+                                    <div class="stat-value">6,548</div>
+                                    <div class="stat-sub">69.57% of source</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-inner">
+                                <div class="stat-icon success"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg></div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Successfully Loaded</div>
+                                    <div class="stat-value">6,531</div>
+                                    <div class="stat-sub" style="color: var(--success);">99.74% load rate</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-card-inner">
+                                <div class="stat-icon success"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg></div>
+                                <div class="stat-content">
+                                    <div class="stat-label">Failed Records</div>
+                                    <div class="stat-value">17</div>
+                                    <div class="stat-sub" style="color: var(--success);">0.26% error rate</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-title">OpCo Load Performance</h2>
+                        <div class="opco-grid">
+                            <!-- Airtech -->
+                            <div class="opco-card">
+                                <div class="opco-header">
+                                    <h3 class="opco-name">Airtech</h3>
+                                    <span class="status-badge excellent">Excellent</span>
+                                </div>
+                                <div class="opco-metrics">
+                                    <div class="metric-row">
+                                        <span class="metric-label">Load Rate</span>
+                                        <span class="metric-value success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                                            96.46%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill success" style="width: 96.46%"></div></div>
+                                </div>
+                                <div class="opco-footer">
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Loaded / Valid</div>
+                                        <div class="opco-stat-value">409 / 424</div>
+                                    </div>
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Exclusion Rate</div>
+                                        <div class="opco-stat-value">53.7%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ATS -->
+                            <div class="opco-card">
+                                <div class="opco-header">
+                                    <h3 class="opco-name">ATS</h3>
+                                    <span class="status-badge excellent">Excellent</span>
+                                </div>
+                                <div class="opco-metrics">
+                                    <div class="metric-row">
+                                        <span class="metric-label">Load Rate</span>
+                                        <span class="metric-value success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                                            99.75%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill success" style="width: 99.75%"></div></div>
+                                </div>
+                                <div class="opco-footer">
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Loaded / Valid</div>
+                                        <div class="opco-stat-value">786 / 788</div>
+                                    </div>
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Exclusion Rate</div>
+                                        <div class="opco-stat-value">5.4%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Dorse -->
+                            <div class="opco-card">
+                                <div class="opco-header">
+                                    <h3 class="opco-name">Dorse</h3>
+                                    <span class="status-badge excellent">Excellent</span>
+                                </div>
+                                <div class="opco-metrics">
+                                    <div class="metric-row">
+                                        <span class="metric-label">Load Rate</span>
+                                        <span class="metric-value success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                                            100%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill success" style="width: 100%"></div></div>
+                                </div>
+                                <div class="opco-footer">
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Loaded / Valid</div>
+                                        <div class="opco-stat-value">2,740 / 2,740</div>
+                                    </div>
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Exclusion Rate</div>
+                                        <div class="opco-stat-value">14.3%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Engineered Products -->
+                            <div class="opco-card">
+                                <div class="opco-header">
+                                    <h3 class="opco-name">Eng. Products</h3>
+                                    <span class="status-badge excellent">Excellent</span>
+                                </div>
+                                <div class="opco-metrics">
+                                    <div class="metric-row">
+                                        <span class="metric-label">Load Rate</span>
+                                        <span class="metric-value success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                                            100%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill success" style="width: 100%"></div></div>
+                                </div>
+                                <div class="opco-footer">
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Loaded / Valid</div>
+                                        <div class="opco-stat-value">100 / 100</div>
+                                    </div>
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Exclusion Rate</div>
+                                        <div class="opco-stat-value">24.2%</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Etairos -->
+                            <div class="opco-card">
+                                <div class="opco-header">
+                                    <h3 class="opco-name">Etairos</h3>
+                                    <span class="status-badge excellent">Excellent</span>
+                                </div>
+                                <div class="opco-metrics">
+                                    <div class="metric-row">
+                                        <span class="metric-label">Load Rate</span>
+                                        <span class="metric-value success">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+                                            100%
+                                        </span>
+                                    </div>
+                                    <div class="progress-bar"><div class="progress-fill success" style="width: 100%"></div></div>
+                                </div>
+                                <div class="opco-footer">
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Loaded / Valid</div>
+                                        <div class="opco-stat-value">2,496 / 2,496</div>
+                                    </div>
+                                    <div class="opco-stat">
+                                        <div class="opco-stat-label">Exclusion Rate</div>
+                                        <div class="opco-stat-value">42.4%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chart-grid">
+                        <div class="chart-card">
+                            <h3 class="chart-title">Load Success Rate (Against Valid Records)</h3>
+                            <div class="bar-chart-container">
+                                <svg class="bar-chart-svg" viewBox="0 0 550 280">
+                                    <!-- Grid lines -->
+                                    <g stroke="hsl(214 20% 88%)" stroke-dasharray="3 3">
+                                        <line x1="60" y1="40" x2="530" y2="40"/>
+                                        <line x1="60" y1="90" x2="530" y2="90"/>
+                                        <line x1="60" y1="140" x2="530" y2="140"/>
+                                        <line x1="60" y1="190" x2="530" y2="190"/>
+                                        <line x1="60" y1="240" x2="530" y2="240"/>
+                                    </g>
+                                    <!-- Y axis labels -->
+                                    <g fill="hsl(215 15% 50%)" font-size="11">
+                                        <text x="50" y="44" text-anchor="end">100</text>
+                                        <text x="50" y="94" text-anchor="end">75</text>
+                                        <text x="50" y="144" text-anchor="end">50</text>
+                                        <text x="50" y="194" text-anchor="end">25</text>
+                                        <text x="50" y="244" text-anchor="end">0</text>
+                                    </g>
+                                    <!-- 95% target line -->
+                                    <line x1="60" y1="50" x2="530" y2="50" stroke="hsl(142 76% 36%)" stroke-dasharray="5 5"/>
+                                    <text x="295" y="45" fill="hsl(142 76% 36%)" font-size="11" text-anchor="middle">95% Target</text>
+                                    <!-- Bars - All showing near 100% -->
+                                    <!-- Airtech -->
+                                    <rect x="80" y="47" width="40" height="193" fill="hsl(142 76% 36%)" rx="3"/>
+                                    <!-- ATS -->
+                                    <rect x="150" y="40" width="40" height="200" fill="hsl(142 76% 36%)" rx="3"/>
+                                    <!-- Dorse -->
+                                    <rect x="220" y="40" width="40" height="200" fill="hsl(142 76% 36%)" rx="3"/>
+                                    <!-- Eng Products -->
+                                    <rect x="290" y="40" width="40" height="200" fill="hsl(142 76% 36%)" rx="3"/>
+                                    <!-- Etairos -->
+                                    <rect x="360" y="40" width="40" height="200" fill="hsl(142 76% 36%)" rx="3"/>
+                                    <!-- X axis labels -->
+                                    <g fill="hsl(215 15% 50%)" font-size="11" text-anchor="middle">
+                                        <text x="100" y="260">Airtech</text>
+                                        <text x="170" y="260">ATS</text>
+                                        <text x="240" y="260">Dorse</text>
+                                        <text x="310" y="260">EP</text>
+                                        <text x="380" y="260">Etairos</text>
+                                    </g>
+                                    <!-- Percentage labels on bars -->
+                                    <g fill="white" font-size="10" font-weight="600" text-anchor="middle">
+                                        <text x="100" y="65">96.5%</text>
+                                        <text x="170" y="58">99.8%</text>
+                                        <text x="240" y="58">100%</text>
+                                        <text x="310" y="58">100%</text>
+                                        <text x="380" y="58">100%</text>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div class="chart-legend">
+                                <div class="legend-item"><div class="legend-dot" style="background: hsl(142 76% 36%);"></div>Load Rate %</div>
+                            </div>
+                        </div>
+
+                        <div class="table-card" style="margin-bottom: 0;">
+                            <div class="table-header">
+                                <h3 class="table-title">OpCo Comparison - Key Metrics</h3>
+                            </div>
+                            <div class="table-wrapper">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 140px;">OpCo</th>
+                                            <th class="right">Source</th>
+                                            <th class="right">Valid</th>
+                                            <th class="right">Loaded</th>
+                                            <th class="right">Load %</th>
+                                            <th class="right">Exclusion %</th>
+                                            <th class="center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="cell-name">Airtech</td>
+                                            <td class="cell-right">916</td>
+                                            <td class="cell-right">424</td>
+                                            <td class="cell-right">409</td>
+                                            <td class="cell-right pct high">96.46%</td>
+                                            <td class="cell-right pct muted">53.7%</td>
+                                            <td class="cell-center"><div class="status-cell success"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg></div></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="cell-name">ATS</td>
+                                            <td class="cell-right">833</td>
+                                            <td class="cell-right">788</td>
+                                            <td class="cell-right">786</td>
+                                            <td class="cell-right pct high">99.75%</td>
+                                            <td class="cell-right pct muted">5.4%</td>
+                                            <td class="cell-center"><div class="status-cell success"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg></div></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="cell-name">Dorse</td>
+                                            <td class="cell-right">3,196</td>
+                                            <td class="cell-right">2,740</td>
+                                            <td class="cell-right">2,740</td>
+                                            <td class="cell-right pct high">100%</td>
+                                            <td class="cell-right pct muted">14.3%</td>
+                                            <td class="cell-center"><div class="status-cell success"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg></div></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="cell-name">Eng. Products</td>
+                                            <td class="cell-right">132</td>
+                                            <td class="cell-right">100</td>
+                                            <td class="cell-right">100</td>
+                                            <td class="cell-right pct high">100%</td>
+                                            <td class="cell-right pct muted">24.2%</td>
+                                            <td class="cell-center"><div class="status-cell success"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg></div></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="cell-name">Etairos</td>
+                                            <td class="cell-right">4,335</td>
+                                            <td class="cell-right">2,496</td>
+                                            <td class="cell-right">2,496</td>
+                                            <td class="cell-right pct high">100%</td>
+                                            <td class="cell-right pct muted">42.4%</td>
+                                            <td class="cell-center"><div class="status-cell success"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg></div></td>
+                                        </tr>
+                                        <tr class="totals-row">
+                                            <td>TOTAL</td>
+                                            <td class="cell-right">9,412</td>
+                                            <td class="cell-right">6,548</td>
+                                            <td class="cell-right">6,531</td>
+                                            <td class="cell-right pct high">99.74%</td>
+                                            <td class="cell-right pct muted">30.4%</td>
+                                            <td class="cell-center"><div class="status-cell success"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg></div></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        }
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelector('.nav-item[data-page="' + pageId + '"]').classList.add('active');
+        }
+    </script>
+</body>
+</html>
