@@ -1,0 +1,38 @@
+name: Deploy AIR Dashboard
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Get repo
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      # SSH into server and deploy
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            # Go to project
+            cd ~/AIR/AIR-Control-Data-Reconcilation
+
+            # Pull latest files
+            git pull origin main
+
+            # Build new Docker image
+            docker build -t air-dashboard .
+
+            # Remove old container if running
+            docker rm -f air-dashboard-container || true
+
+            # Run new container
+            docker run -d --name air-dashboard-container -p 9000:80 air-dashboard
