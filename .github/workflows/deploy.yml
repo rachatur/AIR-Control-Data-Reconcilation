@@ -10,11 +10,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Get repo
       - name: Checkout Repo
         uses: actions/checkout@v3
 
-      # SSH into server and deploy
       - name: Deploy to Server
         uses: appleboy/ssh-action@v0.1.7
         with:
@@ -22,17 +20,21 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            # Go to project
             cd ~/AIR/AIR-Control-Data-Reconcilation
 
-            # Pull latest files
+            echo "Pulling latest code..."
             git pull origin main
 
-            # Build new Docker image
+            echo "Building Docker image..."
             docker build -t air-dashboard .
 
-            # Remove old container if running
+            echo "Stopping old container..."
             docker rm -f air-dashboard-container || true
 
-            # Run new container
-            docker run -d --name air-dashboard-container -p 9000:80 air-dashboard
+            echo "Cleaning stale networks (prevent port issues)..."
+            docker network prune -f || true
+
+            echo "Running container on port 1717..."
+            docker run -d --name air-dashboard-container -p 1717:80 air-dashboard
+
+            echo "Deployment complete."
