@@ -31,10 +31,7 @@ jobs:
             echo "Stopping old container..."
             docker rm -f air-dashboard-container || true
 
-            echo "Cleaning stale networks (prevent port issues)..."
-            docker network prune -f || true
+            echo "Starting container using host network..."
+            docker run -d --name air-dashboard-container --network host air-dashboard
 
-            echo "Running container on port 1717..."
-            docker run -d --name air-dashboard-container -p 1717:80 air-dashboard
-
-            echo "Deployment complete."
+            echo "Deployment complete!"
