@@ -22,16 +22,27 @@ jobs:
           script: |
             cd ~/AIR/AIR-Control-Data-Reconcilation
 
-            echo "Pulling latest code..."
-            git pull origin main
+            echo "------------------------------------"
+            echo "Fetching latest code from GitHub..."
+            echo "------------------------------------"
+            git fetch --all
+            git reset --hard origin/main
 
-            echo "Building Docker image..."
-            docker build -t air-dashboard .
+            echo "------------------------------------"
+            echo "Building Docker image (no cache)..."
+            echo "------------------------------------"
+            docker build --no-cache -t air-dashboard .
 
+            echo "------------------------------------"
             echo "Stopping old container..."
+            echo "------------------------------------"
             docker rm -f air-dashboard-container || true
 
-            echo "Starting container using host network..."
+            echo "------------------------------------"
+            echo "Starting new container on host network..."
+            echo "------------------------------------"
             docker run -d --name air-dashboard-container --network host air-dashboard
 
+            echo "------------------------------------"
             echo "Deployment complete!"
+            echo "------------------------------------"
