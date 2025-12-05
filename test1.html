@@ -1,327 +1,62 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>CI/CD Test Page</title>
-  <style>
-    :root{
-      --bg:#0f1724;
-      --card:#0b1220;
-      --muted:#8b98a8;
-      --accent:#6ee7b7;
-      --fail:#ff7b7b;
-      --success:#7ef7a6;
-      --glass: rgba(255,255,255,0.03);
-      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-    }
-    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071025 0%, #0b1726 100%);color:#e6eef6}
-    .wrap{max-width:1100px;margin:32px auto;padding:24px}
-    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
-    .logo{
-      width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#5bd3ff);
-      display:flex;align-items:center;justify-content:center;font-weight:700;color:#04212a;
-      box-shadow:0 6px 18px rgba(7,20,34,0.7);
-    }
-    h1{font-size:20px;margin:0}
-    p.lead{margin:0;color:var(--muted);font-size:13px}
-
-    .grid{display:grid;grid-template-columns: 1fr 360px;gap:18px;margin-top:16px}
-    .card{
-      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-      border-radius:12px;padding:16px;box-shadow: 0 6px 20px rgba(2,6,23,0.6);
-    }
-
-    /* Controls */
-    .controls{display:flex;gap:10px;align-items:center;margin-bottom:10px}
-    .btn{
-      padding:10px 14px;border-radius:10px;border:0;background:var(--accent);color:#04212a;font-weight:600;cursor:pointer;
-      box-shadow:0 6px 12px rgba(46,201,154,0.12);
-    }
-    .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
-    .btn.danger{background:var(--fail);color:#2b0707;box-shadow:none}
-
-    .status-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
-    .status {
-      display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:10px;background:var(--glass);
-      min-width:140px;justify-content:space-between;
-    }
-    .dot{width:12px;height:12px;border-radius:50%}
-    .dot.running{background:linear-gradient(90deg,var(--accent),#5bd3ff);box-shadow:0 0 8px rgba(107,230,210,0.35)}
-    .dot.success{background:var(--success)}
-    .dot.fail{background:var(--fail)}
-
-    /* Test list */
-    .tests{display:flex;flex-direction:column;gap:8px}
-    .test-item{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:10px;background:rgba(255,255,255,0.012)}
-    .test-meta{display:flex;gap:12px;align-items:center}
-    .case-name{font-weight:600}
-    .muted{color:var(--muted);font-size:13px}
-
-    /* Logs */
-    .log{height:280px;overflow:auto;background:rgba(0,0,0,0.18);padding:12px;border-radius:8px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;font-size:13px}
-    .log-line{margin:2px 0}
-    .log-time{color:var(--muted);margin-right:8px;font-size:12px}
-    .ok{color:var(--success)}
-    .err{color:var(--fail)}
-
-    footer{margin-top:14px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;align-items:center}
-    .small{font-size:12px;color:var(--muted)}
-    @media (max-width:860px){
-      .grid{grid-template-columns:1fr; }
-      .logo{width:54px;height:54px}
-    }
-  </style>
+<meta charset="UTF-8" />
+<title>CI/CD Smoke Test</title>
+<style>
+  body{font-family:Arial;background:#111;color:#eee;margin:40px;}
+  .box{background:#1c1c1c;padding:20px;border-radius:10px;max-width:600px;margin:auto;}
+  button{padding:10px 16px;border:0;border-radius:6px;background:#4ade80;color:#000;font-weight:bold;cursor:pointer;}
+  .stats{margin:15px 0;display:flex;gap:20px;}
+  .log{background:#000;height:180px;overflow:auto;font:12px monospace;padding:10px;border-radius:6px;}
+  .ok{color:#4ade80;} .fail{color:#f87171;}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <div class="logo">CI</div>
-      <div>
-        <h1>Hello — this is a test for CI/CD</h1>
-        <p class="lead">Interactive demo page for validating builds, test runs and artifacts in pipelines.</p>
-      </div>
-    </header>
+<div class="box">
+  <h2>CI/CD Smoke Test</h2>
+  <p>Quick pass/fail UI for verifying deployment artifacts.</p>
 
-    <div class="grid">
-      <div class="card">
-        <div class="controls">
-          <button id="run" class="btn">Run Tests</button>
-          <button id="rerun-fail" class="btn secondary">Rerun Failed</button>
-          <button id="clear" class="btn secondary">Clear Logs</button>
-          <button id="fail-all" class="btn danger">Force Fail</button>
-        </div>
+  <button id="run">Run Test</button>
 
-        <div class="status-row" aria-live="polite">
-          <div class="status"><div><strong>Suite</strong><div class="muted">Overall</div></div><div id="suite-dot" class="dot"></div></div>
-          <div class="status"><div><strong>Passed</strong><div class="muted">Count</div></div><div id="passed-count">0</div></div>
-          <div class="status"><div><strong>Failed</strong><div class="muted">Count</div></div><div id="failed-count">0</div></div>
-          <div class="status"><div><strong>Duration</strong><div class="muted">Elapsed</div></div><div id="duration">0s</div></div>
-        </div>
-
-        <hr style="margin:14px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)" />
-
-        <section>
-          <h3 style="margin:0 0 10px 0;font-size:15px">Test cases</h3>
-          <div id="test-list" class="tests" aria-live="polite">
-            <!-- Items inserted by JS -->
-          </div>
-        </section>
-
-        <hr style="margin:14px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)" />
-
-        <section>
-          <h3 style="margin:0 0 10px 0;font-size:15px">Logs</h3>
-          <div id="log" class="log" aria-live="polite"></div>
-        </section>
-
-        <footer>
-          <div class="small">Build: <strong id="build-id">#local-001</strong></div>
-          <div class="small">Branch: <strong id="branch">main</strong></div>
-        </footer>
-      </div>
-
-      <div class="card">
-        <h3 style="margin-top:0">Quick controls & utilities</h3>
-        <p class="muted" style="margin-top:0">Use these to simulate CI steps during manual testing or to include as a visual smoke-test step in artifact previews.</p>
-
-        <div style="margin-top:12px">
-          <label class="muted">Fake commit message</label>
-          <input id="message" type="text" placeholder="fix: test pipeline" style="width:100%;padding:10px;margin-top:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit">
-        </div>
-
-        <div style="margin-top:12px;display:flex;gap:8px">
-          <button id="download-logs" class="btn secondary">Download Logs</button>
-          <button id="copy-status" class="btn secondary">Copy Status</button>
-        </div>
-
-        <div style="margin-top:18px">
-          <h4 style="margin:0 0 10px 0;font-size:14px">Recent runs</h4>
-          <div class="muted" id="history">No runs yet</div>
-        </div>
-      </div>
-    </div>
+  <div class="stats">
+    <div>Passed: <span id="pass">0</span></div>
+    <div>Failed: <span id="fail">0</span></div>
+    <div>Status: <span id="state">Idle</span></div>
   </div>
 
-  <script>
-    // --- sample test data
-    const TEST_CASES = [
-      { id: 'tc-01', name: 'Login flow', desc: 'Auth and session cookie', duration: 800 },
-      { id: 'tc-02', name: 'API: GET /users', desc: 'List users endpoint', duration: 450 },
-      { id: 'tc-03', name: 'API: POST /orders', desc: 'Create order', duration: 900 },
-      { id: 'tc-04', name: 'UI: Dashboard render', desc: 'Main dashboard render', duration: 300 },
-      { id: 'tc-05', name: 'E2E: Checkout', desc: 'Full cart checkout', duration: 1200 },
-    ];
+  <div class="log" id="log"></div>
+</div>
 
-    // state
-    let runHistory = [];
-    let forcedFail = false;
+<script>
+  const log = msg => {
+    const box = document.getElementById("log");
+    box.innerHTML += msg + "<br>";
+    box.scrollTop = box.scrollHeight;
+  };
 
-    // dom
-    const runBtn = document.getElementById('run');
-    const rerunFailBtn = document.getElementById('rerun-fail');
-    const clearBtn = document.getElementById('clear');
-    const failAllBtn = document.getElementById('fail-all');
-    const testListEl = document.getElementById('test-list');
-    const logEl = document.getElementById('log');
-    const passedCountEl = document.getElementById('passed-count');
-    const failedCountEl = document.getElementById('failed-count');
-    const durationEl = document.getElementById('duration');
-    const suiteDot = document.getElementById('suite-dot');
-    const historyEl = document.getElementById('history');
-    const downloadLogsBtn = document.getElementById('download-logs');
-    const copyStatusBtn = document.getElementById('copy-status');
+  document.getElementById("run").onclick = async () => {
+    let pass = 0, fail = 0;
+    document.getElementById("state").textContent = "Running";
+    document.getElementById("log").innerHTML = "";
 
-    // init
-    function renderTestCases(list){
-      testListEl.innerHTML = '';
-      list.forEach(t=>{
-        const div = document.createElement('div');
-        div.className = 'test-item';
-        div.id = t.id;
-        div.innerHTML = `
-          <div class="test-meta">
-            <div style="width:10px"></div>
-            <div>
-              <div class="case-name">${t.name}</div>
-              <div class="muted" style="margin-top:2px">${t.desc}</div>
-            </div>
-          </div>
-          <div class="muted" id="${t.id}-status">idle</div>
-        `;
-        testListEl.appendChild(div);
-      });
-    }
+    const tests = ["Load page", "API ping", "Render content", "Timeout check"];
 
-    function log(msg, cls='') {
-      const time = new Date().toLocaleTimeString();
-      const el = document.createElement('div');
-      el.className = 'log-line ' + cls;
-      el.innerHTML = `<span class="log-time">[${time}]</span>${msg}`;
-      logEl.appendChild(el);
-      logEl.scrollTop = logEl.scrollHeight;
-    }
-
-    function setSuiteStatus(state){
-      suiteDot.className = 'dot ' + state;
-    }
-
-    // simulate running tests
-    async function runTests(cases){
-      const start = Date.now();
-      passedCountEl.textContent = '0';
-      failedCountEl.textContent = '0';
-      durationEl.textContent = '0s';
-      setSuiteStatus('running');
-      log('Starting test suite...');
-      let passed = 0, failed = 0;
-      for (const t of cases) {
-        const statusLabel = document.getElementById(t.id + '-status');
-        statusLabel.textContent = 'running';
-        log(`▶ ${t.name} — started`);
-        await new Promise(r => setTimeout(r, t.duration * (0.7 + Math.random()*0.8)));
-        // randomize pass/fail unless forcedFail
-        const willFail = forcedFail || (Math.random() < 0.18);
-        if (willFail) {
-          statusLabel.innerHTML = '<span class="err">failed</span>';
-          log(`✖ ${t.name} — failed`, 'err');
-          failed++;
-        } else {
-          statusLabel.innerHTML = '<span class="ok">passed</span>';
-          log(`✔ ${t.name} — passed`, 'ok');
-          passed++;
-        }
-        passedCountEl.textContent = passed;
-        failedCountEl.textContent = failed;
+    for(const t of tests){
+      log("Running: " + t);
+      await new Promise(r => setTimeout(r, 400));
+      if(Math.random() < 0.8){
+        pass++; log('<span class="ok">✔ ' + t + ' passed</span>');
+      } else {
+        fail++; log('<span class="fail">✖ ' + t + ' failed</span>');
       }
-      const dur = Math.round((Date.now()-start)/1000);
-      durationEl.textContent = dur + 's';
-      const finalState = failed > 0 ? 'fail' : 'success';
-      setSuiteStatus(finalState);
-      log(`Test suite finished — ${passed} passed, ${failed} failed (${dur}s)`);
-      // record history
-      const run = { time: new Date().toISOString(), passed, failed, duration: dur };
-      runHistory.unshift(run);
-      if (runHistory.length > 6) runHistory.pop();
-      updateHistoryView();
-      // reset forced fail after run
-      forcedFail = false;
-      failAllBtn.classList.remove('active');
+      document.getElementById("pass").textContent = pass;
+      document.getElementById("fail").textContent = fail;
     }
 
-    function updateHistoryView(){
-      if (runHistory.length === 0) {
-        historyEl.textContent = 'No runs yet';
-        return;
-      }
-      historyEl.innerHTML = runHistory.map(r => {
-        const stamp = new Date(r.time).toLocaleString();
-        const status = r.failed > 0 ? 'failed' : 'passed';
-        return `<div style="margin-bottom:8px"><strong>${status.toUpperCase()}</strong> — ${r.passed} / ${r.passed + r.failed} • ${r.duration}s <div class="muted">${stamp}</div></div>`;
-      }).join('');
-    }
-
-    // actions
-    runBtn.addEventListener('click', async () => {
-      // clone test cases so statuses can be updated independently
-      renderTestCases(TEST_CASES);
-      await runTests(TEST_CASES);
-    });
-
-    rerunFailBtn.addEventListener('click', async () => {
-      const failedIds = [];
-      TEST_CASES.forEach(t => {
-        const status = document.getElementById(t.id + '-status');
-        if (status && status.textContent.includes('failed')) failedIds.push(t.id);
-      });
-      if (failedIds.length === 0) {
-        alert('No failed tests to rerun.');
-        return;
-      }
-      // build a subset
-      const subset = TEST_CASES.filter(t => failedIds.includes(t.id));
-      renderTestCases(TEST_CASES);
-      await runTests(subset);
-    });
-
-    clearBtn.addEventListener('click', () => {
-      logEl.innerHTML = '';
-      renderTestCases(TEST_CASES);
-      passedCountEl.textContent = '0';
-      failedCountEl.textContent = '0';
-      durationEl.textContent = '0s';
-      setSuiteStatus('');
-      historyEl.textContent = runHistory.length ? '' : 'No runs yet';
-    });
-
-    failAllBtn.addEventListener('click', () => {
-      forcedFail = true;
-      failAllBtn.classList.toggle('active');
-      alert('Next run will force failures for demonstration.');
-    });
-
-    downloadLogsBtn.addEventListener('click', () => {
-      const text = Array.from(logEl.querySelectorAll('.log-line')).map(n => n.textContent).join('\\n');
-      const blob = new Blob([text], {type: 'text/plain'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'cicd-test-logs.txt'; a.click();
-      URL.revokeObjectURL(url);
-    });
-
-    copyStatusBtn.addEventListener('click', () => {
-      const msg = `Build ${document.getElementById('build-id').textContent} — ${passedCountEl.textContent} passed, ${failedCountEl.textContent} failed`;
-      navigator.clipboard?.writeText(msg).then(()=> alert('Status copied to clipboard'), ()=> alert('Copy failed'));
-    });
-
-    // initial render
-    renderTestCases(TEST_CASES);
-    setSuiteStatus('');
-    updateHistoryView();
-
-    // auto-run when loaded (comment this if you don't want it)
-    // setTimeout(()=> runBtn.click(), 700);
-
-  </script>
+    document.getElementById("state").textContent =
+      fail === 0 ? "Success" : "Failed";
+  };
+</script>
 </body>
 </html>
