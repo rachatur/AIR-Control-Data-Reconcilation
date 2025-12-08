@@ -1,200 +1,45 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Random Print Design</title>
-<style>
-  :root{--bg:#ffffff}
-  html,body{height:100%;margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif}
-  .wrap{max-width:900px;margin:18px auto;padding:14px;display:flex;gap:12px;align-items:flex-start;justify-content:center}
-  #canvas{border:1px solid #ddd;box-shadow:0 6px 18px rgba(0,0,0,0.06);width:800px;height:1120px}
-  .controls{display:flex;flex-direction:column;gap:8px}
-  button{padding:8px 12px;border-radius:7px;border:0;cursor:pointer;background:#2b6bf6;color:#fff;font-weight:600}
-  .small{font-size:13px;color:#444}
-  /* print: hide controls and expand canvas to page */
-  @media print{
-    body{margin:0}
-    .wrap{margin:0;padding:0}
-    .controls{display:none}
-    #canvas{border:0;box-shadow:none;width:100vw;height:100vh}
-    @page { size: auto; margin: 6mm; } /* user agents may ignore */
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CI/CD Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background: #f4f4f4;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            background: #e3ffe3;
+            border-left: 5px solid #28a745;
+            font-size: 1.1em;
+        }
+    </style>
 </head>
 <body>
-  <div class="wrap">
-    <canvas id="canvas" width="800" height="1120" role="img" aria-label="Random design"></canvas>
-    <div class="controls" aria-hidden="false">
-      <button id="regen">Generate</button>
-      <button id="print">Print</button>
-      <button id="download">Download PNG</button>
-      <div class="small">Tip: press Generate until you get a design you like, then Print.</div>
+    <div class="container">
+        <h1>CI/CD Deployment Test</h1>
+        <p>If you're seeing this page, your CI/CD pipeline deployed successfully.</p>
+
+        <div id="status" class="status">Running JavaScript test…</div>
     </div>
-  </div>
 
-<script>
-(function(){
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d', { alpha: false });
-  const W = canvas.width, H = canvas.height;
-
-  function rand(min=0, max=1){ return Math.random()*(max-min)+min; }
-  function rint(a,b){ return Math.floor(rand(a,b+1)); }
-  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-
-  // palette generators
-  function pastelPalette(n){
-    const base = [rint(120,220), rint(120,220), rint(120,220)];
-    return new Array(n).fill(0).map(()=>`rgba(${base.map(v=>Math.min(255, v + rint(-60,60))).join(',')},${rand(0.7,1).toFixed(2)})`);
-  }
-  function vibrantPalette(n){
-    const hues = [];
-    const baseHue = rint(0,360);
-    for(let i=0;i<n;i++) hues.push(`hsl(${(baseHue + i*40 + rint(-20,20))%360},${rint(65,95)}%,${rint(45,60)}%)`);
-    return hues;
-  }
-
-  // draw helpers
-  function clear(bg='#fff'){
-    ctx.fillStyle = bg;
-    ctx.fillRect(0,0,W,H);
-  }
-
-  function drawNoise(alpha=0.06){
-    const img = ctx.createImageData(W,H);
-    for(let i=0;i<img.data.length;i+=4){
-      const v = 255 * (0.5 + (Math.random()-0.5));
-      img.data[i]=img.data[i+1]=img.data[i+2]=v;
-      img.data[i+3]=Math.floor(255*alpha);
-    }
-    ctx.putImageData(img,0,0);
-  }
-
-  function drawBlobs(palette){
-    const count = rint(5,12);
-    for(let i=0;i<count;i++){
-      const x = rand(-0.2,1.2)*W, y = rand(-0.2,1.2)*H;
-      const rx = rand(120,700), ry = rand(120,700);
-      ctx.save();
-      ctx.translate(x,y);
-      ctx.rotate(rand(0,Math.PI*2));
-      const g = ctx.createLinearGradient(-rx,-ry, rx, ry);
-      g.addColorStop(0, pick(palette));
-      g.addColorStop(1, pick(palette));
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      for(let a=0;a<Math.PI*2;a+=0.2){
-        const r = rx * (0.6 + 0.4*Math.sin(a*3 + rand(-1,1)));
-        ctx.lineTo(Math.cos(a)*r, Math.sin(a)*r* (0.6 + rand(-0.2,0.6)));
-      }
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    }
-  }
-
-  function drawLines(palette){
-    const lines = rint(6,18);
-    for(let i=0;i<lines;i++){
-      ctx.strokeStyle = pick(palette);
-      ctx.lineWidth = rand(2,24);
-      ctx.beginPath();
-      const sx = rand(-0.1,1.1)*W, sy = rand(-0.1,1.1)*H;
-      ctx.moveTo(sx,sy);
-      const cx = rand(-0.2,1.2)*W, cy = rand(-0.2,1.2)*H;
-      ctx.quadraticCurveTo(cx,cy, rand(-0.1,1.1)*W, rand(-0.1,1.1)*H);
-      ctx.stroke();
-    }
-  }
-
-  function drawShapes(palette){
-    const n = rint(6,18);
-    for(let i=0;i<n;i++){
-      const type = Math.random();
-      ctx.fillStyle = pick(palette);
-      ctx.globalAlpha = rand(0.45,0.95);
-      const x = rand(0.05,0.95)*W, y = rand(0.05,0.95)*H, s = rand(40,260);
-      if(type < 0.4){
-        ctx.beginPath();
-        ctx.ellipse(x,y, s*rand(0.4,1.2), s*rand(0.4,1.2), rand(0,Math.PI*2),0,Math.PI*2);
-        ctx.fill();
-      } else if(type < 0.75){
-        ctx.fillRect(x - s/2, y - s/2, s, s);
-      } else {
-        ctx.beginPath();
-        ctx.moveTo(x, y - s/1.2);
-        for(let k=1;k<6;k++){
-          ctx.lineTo(x + s*Math.sin(k)*0.8, y + s*Math.cos(k)*0.8);
-        }
-        ctx.closePath(); ctx.fill();
-      }
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function drawGridOverlay(){
-    if(Math.random() < 0.45){
-      ctx.strokeStyle = 'rgba(0,0,0,0.06)';
-      ctx.lineWidth = 1;
-      const gap = rint(18,60);
-      for(let x=0;x<W;x+=gap){
-        ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
-      }
-      for(let y=0;y<H;y+=gap){
-        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
-      }
-    }
-  }
-
-  function addAccentText(){
-    if(Math.random() < 0.6){
-      ctx.save();
-      const txt = pick(['DESIGN','PRINT','ABSTRACT','ART','SAMPLE','COMPOSE']);
-      ctx.translate(rand(0.1,0.9)*W, rand(0.15,0.85)*H);
-      ctx.rotate(rand(-0.3,0.3));
-      ctx.font = `${rint(36,180)}px serif`;
-      ctx.fillStyle = 'rgba(0,0,0,0.08)';
-      ctx.fillText(txt, 0, 0);
-      ctx.restore();
-    }
-  }
-
-  function generate(){
-    // choose a background and palette
-    const useVibrant = Math.random() < 0.5;
-    const palette = useVibrant ? vibrantPalette(6) : pastelPalette(6);
-    const bg = pick(['#ffffff','#f7f7f3','#0b0b0b','#faf3f0']);
-    clear(bg);
-    // layering
-    drawBlobs(palette);
-    drawShapes(palette);
-    drawLines(palette);
-    addAccentText();
-    drawGridOverlay();
-    // soft noise for texture
-    drawNoise(0.04);
-  }
-
-  document.getElementById('regen').addEventListener('click', generate);
-  document.getElementById('print').addEventListener('click', ()=>{
-    // Ensure canvas is fully rendered, then print
-    setTimeout(()=> window.print(), 120);
-  });
-
-  document.getElementById('download').addEventListener('click', ()=>{
-    const a = document.createElement('a');
-    a.href = canvas.toDataURL('image/png');
-    a.download = 'random-design.png';
-    a.click();
-  });
-
-  // generate initial
-  generate();
-
-  // optional: regenerate on double-click canvas
-  canvas.addEventListener('dblclick', generate);
-})();
-</script>
+    <script>
+        // Simple JS check for pipeline validation
+        document.getElementById("status").innerText =
+            "JavaScript Loaded: Test Passed ✓";
+    </script>
 </body>
 </html>
