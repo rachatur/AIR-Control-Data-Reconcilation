@@ -32,8 +32,7 @@ jobs:
             echo "Generating index.html on server..."
             echo "------------------------------------"
 
-            # Create the first part of the HTML file
-            cat << 'EOF' > index.html
+cat << 'EOF' > index.html
 <!DOCTYPE html>
 <html>
 <head>
@@ -45,7 +44,6 @@ jobs:
 <ul>
 EOF
 
-            # Append file list dynamically
             find . -type f \
               ! -path "./.git/*" \
               ! -path "./.github/*" \
@@ -56,7 +54,6 @@ EOF
                   echo "<li><a href=\"$FILE\">$FILE</a></li>" >> index.html
                 done
 
-            # Close HTML tags
             echo "</ul></body></html>" >> index.html
 
             echo "------------------------------------"
