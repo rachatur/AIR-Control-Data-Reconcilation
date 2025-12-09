@@ -12,7 +12,41 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
+        
+      - name: Generate index.html (Auto File List)
+        run: |
+          echo "<!DOCTYPE html>" > index.html
+          echo "<html><head><meta charset='UTF-8'><title>Repository Index</title></head><body>" >> index.html
+          echo "<h1>Repository File Index</h1>" >> index.html
+          echo "<ul>" >> index.html
 
+          # List all files except .git, .github, node_modules, and index.html itself
+          find . -type f \
+            ! -path "./.git/*" \
+            ! -path "./.github/*" \
+            ! -path "./node_modules/*" \
+            ! -name "index.html" \
+          | while read FILE; do
+              FILE="${FILE#./}"
+              echo "<li><a href=\"$FILE\">$FILE</a></li>" >> index.html
+            done
+
+          echo "</ul>" >> index.html
+          echo "</body></html>" >> index.html
+
+      - name: Commit index.html (Prevent Infinite Loop)
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+          # Only commit if index.html changed
+          if ! git diff --quiet index.html; then
+            git add index.html
+            git commit -m "Auto-update index.html (file index)"
+            git push
+          else
+            echo "No index.html changes — skipping commit."
+          fi
       - name: Deploy to Server
         uses: appleboy/ssh-action@v0.1.7
         with:
