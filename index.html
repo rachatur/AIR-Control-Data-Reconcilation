@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Air Control – Data Conversions</title>
+
+    <style>
+        :root {
+            --background: hsl(210 20% 98%);
+            --foreground: hsl(215 25% 15%);
+            --card: hsl(0 0% 100%);
+            --primary: hsl(200 95% 45%);
+            --primary-foreground: hsl(0 0% 100%);
+            --secondary: hsl(185 80% 50%);
+            --muted: hsl(210 15% 94%);
+            --muted-foreground: hsl(215 15% 50%);
+            --border: hsl(214 20% 88%);
+            --radius: 0.75rem;
+            --shadow-sm: 0 2px 8px -2px hsl(215 25% 15% / 0.08);
+            --shadow-md: 0 4px 16px -4px hsl(215 25% 15% / 0.12);
+            --shadow-lg: 0 8px 24px -6px hsl(215 25% 15% / 0.15);
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--foreground);
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: auto;
+            padding: 40px 20px;
+        }
+
+        .hero {
+            text-align: center;
+            margin-top: 40px;
+            margin-bottom: 60px;
+        }
+
+        .hero-title {
+            font-size: 38px;
+            font-weight: 800;
+            color: var(--foreground);
+            margin-bottom: 12px;
+        }
+
+        .hero-subtitle {
+            font-size: 18px;
+            color: var(--muted-foreground);
+            margin: 0 auto;
+            max-width: 700px;
+            line-height: 1.6;
+        }
+
+        .flow-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 32px;
+            margin: auto;
+            max-width: 900px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .flow-title {
+            font-size: 22px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .flow-steps {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .step {
+            flex: 1;
+            min-width: 130px;
+            background: var(--muted);
+            padding: 18px;
+            border-radius: var(--radius);
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+            transition: 0.2s ease;
+        }
+
+        .step:hover {
+            background: hsl(200 95% 45% / 0.08);
+            transform: translateY(-3px);
+        }
+
+        .step-icon {
+            width: 32px;
+            height: 32px;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+
+        .step-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .cta {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .cta-button {
+            background: var(--primary);
+            color: var(--primary-foreground);
+            padding: 14px 26px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 600;
+            box-shadow: var(--shadow-md);
+            transition: 0.25s;
+        }
+
+        .cta-button:hover {
+            background: hsl(200 95% 40%);
+            transform: translateY(-3px);
+        }
+
+        .footer {
+            margin-top: 60px;
+            padding: 20px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--muted-foreground);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+
+        <div class="hero">
+            <h1 class="hero-title">Air Control – Data Conversion Framework</h1>
+            <p class="hero-subtitle">
+                A unified process for Extracting, Validating, Transforming, Loading, and Reconciling
+                enterprise data across all Air Control OpCos.
+            </p>
+        </div>
+
+        <div class="flow-card">
+            <div class="flow-title">End-to-End Migration Lifecycle</div>
+
+            <div class="flow-steps">
+
+                <div class="step">
+                    <svg class="step-icon" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+                        <path stroke-width="2" d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline stroke-width="2" points="7 10 12 15 17 10"/><line stroke-width="2" x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    <div class="step-title">Extract</div>
+                </div>
+
+                <div class="step">
+                    <svg class="step-icon" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+                        <path stroke-width="2" d="M12 20v-6M6 20v-4M18 20v-8M3 3h18v4H3z"/>
+                    </svg>
+                    <div class="step-title">Transform</div>
+                </div>
+
+                <div class="step">
+                    <svg class="step-icon" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+                        <circle stroke-width="2" cx="12" cy="12" r="10"/><path stroke-width="2" d="M12 8v4m0 4h.01"/>
+                    </svg>
+                    <div class="step-title">Validate</div>
+                </div>
+
+                <div class="step">
+                    <svg class="step-icon" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+                        <path stroke-width="2" d="M8 17l4 4 4-4M12 12v9M20 12H4"/>
+                    </svg>
+                    <div class="step-title">Load (FBDI / HDL)</div>
+                </div>
+
+                <div class="step">
+                    <svg class="step-icon" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+                        <polyline stroke-width="2" points="20 6 9 17 4 12"/>
+                    </svg>
+                    <div class="step-title">Reconcile</div>
+                </div>
+
+                <div class="step">
+                    <svg class="step-icon" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+                        <circle stroke-width="2" cx="12" cy="12" r="10"/><polyline stroke-width="2" points="16 12 12 8 8 12"/>
+                    </svg>
+                    <div class="step-title">Sign-off</div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="cta">
+            <a href="dashboard.html" class="cta-button">Enter Dashboard</a>
+        </div>
+
+        <div class="footer">
+            © 2025 Air Control Concepts • Data Conversion & Reconciliation Platform
+        </div>
+
+    </div>
+
+</body>
+</html>
