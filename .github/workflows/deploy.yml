@@ -32,18 +32,13 @@ jobs:
             echo "Generating index.html on server..."
             echo "------------------------------------"
 
-cat << 'EOF' > index.html
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Repository Index</title>
-</head>
-<body>
-<h1>Repository File Index</h1>
-<ul>
-EOF
+            # Overwrite index.html
+            echo "<!DOCTYPE html>" > index.html
+            echo "<html><head><meta charset='UTF-8'><title>Repository Index</title></head><body>" >> index.html
+            echo "<h1>Repository File Index</h1>" >> index.html
+            echo "<ul>" >> index.html
 
+            # Append file list
             find . -type f \
               ! -path "./.git/*" \
               ! -path "./.github/*" \
@@ -56,12 +51,10 @@ EOF
 
             echo "</ul></body></html>" >> index.html
 
-            echo "------------------------------------"
             echo "index.html generated!"
-            echo "------------------------------------"
 
             echo "------------------------------------"
-            echo "Building Docker image (no cache)..."
+            echo "Building Docker image..."
             echo "------------------------------------"
             docker build --no-cache -t air-dashboard .
 
@@ -71,7 +64,7 @@ EOF
             docker rm -f air-dashboard-container || true
 
             echo "------------------------------------"
-            echo "Starting new container on host network..."
+            echo "Starting new container..."
             echo "------------------------------------"
             docker run -d --name air-dashboard-container --network host air-dashboard
 
