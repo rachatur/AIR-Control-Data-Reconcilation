@@ -29,20 +29,37 @@ jobs:
             git reset --hard origin/main
 
             echo "------------------------------------"
-            echo "Generating index.html on server..."
+            echo "Generating styled index.html on server..."
             echo "------------------------------------"
 
-            # Overwrite index.html
+            # Create styled index.html
             echo "<!DOCTYPE html>" > index.html
-            echo "<html><head><meta charset='UTF-8'><title>Repository Index</title></head><body>" >> index.html
+            echo "<html>" >> index.html
+            echo "<head>" >> index.html
+            echo "<meta charset='UTF-8'>" >> index.html
+            echo "<title>Repository Index</title>" >> index.html
+
+            # CSS Styling
+            echo "<style>" >> index.html
+            echo "body { font-family: Arial, sans-serif; background:#f4f4f4; padding:20px; }" >> index.html
+            echo "h1 { color:#333; }" >> index.html
+            echo "ul { list-style:none; padding:0; max-width:800px; margin:auto; }" >> index.html
+            echo "li { background:#fff; margin:6px 0; padding:12px; border-radius:6px; border:1px solid #ddd; }" >> index.html
+            echo "a { text-decoration:none; color:#007bff; font-weight:bold; }" >> index.html
+            echo "a:hover { color:#0056b3; }" >> index.html
+            echo "</style>" >> index.html
+
+            echo "</head><body>" >> index.html
             echo "<h1>Repository File Index</h1>" >> index.html
             echo "<ul>" >> index.html
 
-            # Append file list
+            # Append file list dynamically (EXCLUDING certain files)
             find . -type f \
               ! -path "./.git/*" \
               ! -path "./.github/*" \
               ! -path "./node_modules/*" \
+              ! -name "Dockerfile" \
+              ! -name "docker-compose.yml" \
               ! -name "index.html" \
               | sed 's|^\./||' \
               | while read FILE; do
@@ -51,10 +68,12 @@ jobs:
 
             echo "</ul></body></html>" >> index.html
 
-            echo "index.html generated!"
+            echo "------------------------------------"
+            echo "Styled index.html generated!"
+            echo "------------------------------------"
 
             echo "------------------------------------"
-            echo "Building Docker image..."
+            echo "Building Docker image (no cache)..."
             echo "------------------------------------"
             docker build --no-cache -t air-dashboard .
 
@@ -64,7 +83,7 @@ jobs:
             docker rm -f air-dashboard-container || true
 
             echo "------------------------------------"
-            echo "Starting new container..."
+            echo "Starting new container on host network..."
             echo "------------------------------------"
             docker run -d --name air-dashboard-container --network host air-dashboard
 
